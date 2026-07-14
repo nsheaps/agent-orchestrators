@@ -36,15 +36,10 @@ example in this space is [traycer.ai](https://traycer.ai).
 
 ```bash
 mise install       # bun + node
-bun install        # JS/TS deps resolve via Cloudsmith — see bunfig.toml
+bun install        # JS/TS deps
 bun run dev         # dev server (apps/web)
 bun run validate    # lint + typecheck + test + build
 ```
-
-> **Cloudsmith:** this repo's `bunfig.toml` points package installs at the
-> org's Cloudsmith npm registry per policy. If you hit 403s installing
-> locally or in CI, onboard to Cloudsmith first:
-> https://ouraring.atlassian.net/wiki/spaces/SW/pages/429498723/Cloudsmith
 
 ## Updating the catalog
 
