@@ -1,0 +1,31 @@
+/*
+ * Design tokens for the Agent Orchestrators catalog.
+ * Ported 1:1 from the `:root` block in multi-agent-orchestrators.html.
+ *
+ * Fonts are pulled in via @import here (rather than a <link> in index.html)
+ * so that "the design system" — palette, radius, and webfonts — stays a
+ * single importable CSS module. If a future perf pass wants to swap this
+ * for preconnect/<link> tags in index.html instead, that's a one-line move;
+ * for now, colocating avoids editing index.html (owned by the app skeleton).
+ */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;450;500;600&display=swap');
+
+:root {
+  --bg: #0d0f14;
+  --panel: #151922;
+  --panel-2: #1b212d;
+  --line: #262e3d;
+  --line-bright: #33405a;
+  --ink: #e8ecf4;
+  --ink-dim: #9aa6bd;
+  --ink-faint: #66718a;
+  --wire: #5eead4; /* signal teal — the "live agent" accent */
+  --wire-dim: #2b6c63;
+  --amber: #f5c15e;
+  --violet: #a99cf5;
+  --rose: #f58ea3;
+  --radius: 14px;
+  --mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --display: 'Space Grotesk', sans-serif;
+  --body: 'Inter', sans-serif;
+}
