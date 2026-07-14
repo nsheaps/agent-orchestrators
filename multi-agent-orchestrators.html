@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multi-Agent Orchestrators</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;450;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0d0f14;
+    --panel:#151922;
+    --panel-2:#1b212d;
+    --line:#262e3d;
+    --line-bright:#33405a;
+    --ink:#e8ecf4;
+    --ink-dim:#9aa6bd;
+    --ink-faint:#66718a;
+    --wire:#5eead4;      /* signal teal — the "live agent" accent */
+    --wire-dim:#2b6c63;
+    --amber:#f5c15e;
+    --violet:#a99cf5;
+    --rose:#f58ea3;
+    --radius:14px;
+    --mono:'IBM Plex Mono',ui-monospace,monospace;
+    --display:'Space Grotesk',sans-serif;
+    --body:'Inter',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--body);
+    font-weight:400;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    background-image:
+      radial-gradient(circle at 12% -5%, rgba(94,234,212,.06), transparent 45%),
+      radial-gradient(circle at 92% 8%, rgba(169,156,245,.05), transparent 40%);
+    background-attachment:fixed;
+    padding-bottom:80px;
+  }
+  .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+
+  /* ---- header ---- */
+  header{padding:56px 0 30px}
+  .eyebrow{
+    font-family:var(--mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--wire);display:flex;align-items:center;gap:10px;margin-bottom:18px;
+  }
+  .eyebrow::before{
+    content:"";width:8px;height:8px;border-radius:50%;background:var(--wire);
+    box-shadow:0 0 0 0 rgba(94,234,212,.6);animation:pulse 2.4s infinite;
+  }
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(94,234,212,.5)}
+    70%{box-shadow:0 0 0 9px rgba(94,234,212,0)}
+    100%{box-shadow:0 0 0 0 rgba(94,234,212,0)}
+  }
+  h1{
+    font-family:var(--display);font-weight:700;font-size:clamp(32px,5vw,52px);
+    line-height:1.02;letter-spacing:-.02em;max-width:16ch;
+  }
+  h1 .fade{color:var(--ink-faint)}
+  .lede{
+    color:var(--ink-dim);font-size:17px;max-width:60ch;margin-top:18px;line-height:1.6;
+  }
+  .lede b{color:var(--ink);font-weight:600}
+
+  /* ---- controls ---- */
+  .controls{
+    position:sticky;top:0;z-index:40;
+    background:rgba(13,15,20,.82);backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+    margin-top:34px;padding:16px 0;
+  }
+  .controls-inner{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+  .search{
+    flex:1 1 240px;position:relative;min-width:200px;
+  }
+  .search input{
+    width:100%;background:var(--panel);border:1px solid var(--line);
+    color:var(--ink);border-radius:10px;padding:11px 14px 11px 38px;
+    font-family:var(--body);font-size:14.5px;outline:none;transition:border-color .18s;
+  }
+  .search input::placeholder{color:var(--ink-faint)}
+  .search input:focus{border-color:var(--wire-dim)}
+  .search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ink-faint)}
+
+  .filtergroup{display:flex;gap:7px;flex-wrap:wrap}
+  .chip{
+    font-family:var(--mono);font-size:12px;letter-spacing:.02em;
+    background:var(--panel);border:1px solid var(--line);color:var(--ink-dim);
+    padding:8px 13px;border-radius:999px;cursor:pointer;transition:all .16s;
+    white-space:nowrap;user-select:none;
+  }
+  .chip:hover{border-color:var(--line-bright);color:var(--ink)}
+  .chip[aria-pressed="true"]{
+    background:var(--wire);color:#062b25;border-color:var(--wire);font-weight:600;
+  }
+  .count{
+    font-family:var(--mono);font-size:12.5px;color:var(--ink-faint);
+    margin-left:auto;white-space:nowrap;
+  }
+  .count b{color:var(--wire)}
+
+  /* ---- section tiers ---- */
+  .tier{padding-top:40px}
+  .tier-head{display:flex;align-items:baseline;gap:14px;margin-bottom:6px}
+  .tier-num{font-family:var(--mono);font-size:13px;color:var(--wire);letter-spacing:.1em}
+  .tier-head h2{font-family:var(--display);font-weight:600;font-size:22px;letter-spacing:-.01em}
+  .tier-sub{color:var(--ink-faint);font-size:14px;margin-bottom:22px;max-width:70ch}
+
+  /* ---- grid + cards ---- */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px}
+  .card{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    overflow:hidden;transition:border-color .18s,transform .18s;
+    display:flex;flex-direction:column;
+  }
+  .card:hover{border-color:var(--line-bright)}
+  .card.open{border-color:var(--wire-dim)}
+  .card-top{padding:18px 18px 16px;cursor:pointer}
+  .card-row1{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+  .card-name{font-family:var(--display);font-weight:600;font-size:18.5px;letter-spacing:-.01em;line-height:1.15}
+  .card-name .tag{
+    font-family:var(--mono);font-size:10px;color:var(--ink-faint);
+    display:block;font-weight:400;letter-spacing:.04em;margin-top:3px;
+  }
+  .chev{
+    color:var(--ink-faint);flex-shrink:0;transition:transform .2s,color .2s;margin-top:3px;
+  }
+  .card.open .chev{transform:rotate(180deg);color:var(--wire)}
+  .card-desc{color:var(--ink-dim);font-size:14px;margin-top:11px;line-height:1.5}
+
+  /* meta badges — the only detail at rest */
+  .badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:15px}
+  .badge{
+    font-family:var(--mono);font-size:11px;padding:4px 9px;border-radius:6px;
+    border:1px solid var(--line);color:var(--ink-dim);letter-spacing:.01em;
+    display:inline-flex;align-items:center;gap:5px;
+  }
+  .badge .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+  .badge.lic-permissive{border-color:rgba(94,234,212,.28);color:#8ff0e0}
+  .badge.lic-permissive .dot{background:var(--wire)}
+  .badge.lic-copyleft{border-color:rgba(245,193,94,.28);color:var(--amber)}
+  .badge.lic-copyleft .dot{background:var(--amber)}
+  .badge.lic-proprietary{border-color:rgba(245,142,163,.28);color:var(--rose)}
+  .badge.lic-proprietary .dot{background:var(--rose)}
+  .badge.form .dot{background:var(--violet)}
+  .badge.form{border-color:rgba(169,156,245,.24);color:var(--violet)}
+
+  /* ---- expandable detail ---- */
+  .detail{
+    max-height:0;overflow:hidden;transition:max-height .32s ease;
+    border-top:1px solid transparent;
+  }
+  .card.open .detail{border-top-color:var(--line);max-height:900px}
+  .detail-inner{padding:16px 18px 20px;background:var(--panel-2)}
+  .drow{display:grid;grid-template-columns:104px 1fr;gap:6px 14px;font-size:13.5px;padding:7px 0}
+  .drow+.drow{border-top:1px solid var(--line)}
+  .dkey{font-family:var(--mono);font-size:11px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.08em;padding-top:2px}
+  .dval{color:var(--ink);line-height:1.5}
+  .dval .harness{
+    display:inline-block;font-family:var(--mono);font-size:11px;
+    background:var(--bg);border:1px solid var(--line);border-radius:5px;
+    padding:2px 7px;margin:2px 3px 2px 0;color:var(--ink-dim);
+  }
+  .repo-link{
+    display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:12.5px;
+    color:var(--wire);text-decoration:none;border:1px solid var(--wire-dim);
+    padding:7px 12px;border-radius:8px;margin-top:14px;transition:background .16s;word-break:break-all;
+  }
+  .repo-link:hover{background:rgba(94,234,212,.08)}
+  .repo-link.dead{color:var(--ink-faint);border-color:var(--line);cursor:default}
+  .note{
+    font-size:12.5px;color:var(--amber);background:rgba(245,193,94,.07);
+    border-left:2px solid var(--amber);padding:9px 12px;border-radius:0 6px 6px 0;margin-top:13px;line-height:1.5;
+  }
+
+  .empty{
+    text-align:center;color:var(--ink-faint);font-family:var(--mono);font-size:14px;
+    padding:60px 0;grid-column:1/-1;
+  }
+
+  /* ---- legend / footer ---- */
+  .legend{
+    margin-top:56px;padding:24px;border:1px solid var(--line);border-radius:var(--radius);
+    background:var(--panel);display:flex;flex-wrap:wrap;gap:26px;
+  }
+  .legend h3{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);width:100%;margin-bottom:2px}
+  .legend .item{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-dim)}
+  .legend .dot{width:9px;height:9px;border-radius:50%}
+  footer{margin-top:40px;color:var(--ink-faint);font-size:12.5px;line-height:1.7;border-top:1px solid var(--line);padding-top:22px}
+  footer b{color:var(--ink-dim)}
+  a.inline{color:var(--wire);text-decoration:none;border-bottom:1px solid var(--wire-dim)}
+
+  @media(max-width:560px){
+    .drow{grid-template-columns:1fr}
+    .dkey{padding-top:0}
+    header{padding:40px 0 20px}
+    .count{width:100%;margin-left:0;order:5}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">live agent orchestrators · 2026</div>
+    <h1>Tools that run your coding agents <span class="fade">side by side.</span></h1>
+    <p class="lede">GUI and desktop apps in the mold of <b>traycer.ai</b> — manage parallel sessions across <b>Claude&nbsp;Code</b>, <b>Codex</b>, <b>Copilot</b> and other harnesses, mostly reusing subscriptions you already pay for. Tap any card to open the repo, license, and supported backends.</p>
+  </header>
+</div>
+
+<div class="controls">
+  <div class="wrap controls-inner">
+    <div class="search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="q" type="text" placeholder="Search names, harnesses, licenses…" autocomplete="off">
+    </div>
+    <div class="filtergroup" id="filters">
+      <button class="chip" data-f="permissive" aria-pressed="false">MIT / Apache</button>
+      <button class="chip" data-f="copyleft" aria-pressed="false">Copyleft</button>
+      <button class="chip" data-f="proprietary" aria-pressed="false">Proprietary</button>
+      <button class="chip" data-f="desktop" aria-pressed="false">Desktop</button>
+      <button class="chip" data-f="web" aria-pressed="false">Web</button>
+      <button class="chip" data-f="mobile" aria-pressed="false">Mobile</button>
+    </div>
+    <div class="count" id="count"></div>
+  </div>
+</div>
+
+<div class="wrap" id="app"></div>
+
+<div class="wrap">
+  <div class="legend">
+    <h3>Reading the badges</h3>
+    <div class="item"><span class="dot" style="background:var(--wire)"></span> Permissive license (MIT / Apache-2.0)</div>
+    <div class="item"><span class="dot" style="background:var(--amber)"></span> Copyleft (AGPL / GPL / Elastic)</div>
+    <div class="item"><span class="dot" style="background:var(--rose)"></span> Proprietary / closed source</div>
+    <div class="item"><span class="dot" style="background:var(--violet)"></span> Form factor (desktop / web / mobile)</div>
+  </div>
+  <footer>
+    <b>Tiers.</b> Tier 1 = full GUI + multi-session + multi-harness + subscription auth. Tier 2 = terminal/TUI managers, some with web UIs. Tier 3 = further candidates worth verifying.<br>
+    <b>Caveat.</b> This space changes weekly — Crystal became Nimbalyst, Terragon went to an OSS snapshot, and Vibe Kanban's parent company (Bloop) announced a shutdown while the project continues community-maintained. Tier-1 licenses were checked against repo LICENSE files; some Tier-3 details are secondhand and provisional. Confirm the exact repo before adopting, since names like "Conductor," "cmux," and "backlog" collide across unrelated projects.
+  </footer>
+</div>
+
+<script>
+const TOOLS = [
+  // ---------- TIER 1 ----------
+  {tier:1, name:"Traycer (desktop)", sub:"desktop orchestration app + CLI", lic:"permissive", licLabel:"Apache-2.0",
+   forms:["desktop"], formLabel:"Desktop + CLI",
+   desc:"The tool named in the brief. Newer open-source desktop/CLI app: drives your existing agents in parallel with a shared context window and agent-to-agent messaging.",
+   auth:"Bring Your Own Agent (subscription) or Traycer inference.",
+   harnesses:["Claude Code","Codex","OpenCode","Cursor"],
+   repo:"https://github.com/traycerai/traycer",
+   note:"Separate from Traycer's original VS Code / Cursor / Windsurf extension, which is proprietary and closed-source."},
+
+  {tier:1, name:"Vibe Kanban", sub:"BloopAI", lic:"permissive", licLabel:"Apache-2.0",
+   forms:["web"], formLabel:"Web (local npx)",
+   desc:"A Kanban board web UI for planning, running, and reviewing parallel agents. Each task gets its own branch, terminal, dev server, and git worktree with inline diff review.",
+   auth:"Each agent's CLI login (subscription or key).",
+   harnesses:["Claude Code","Codex","Gemini CLI","Copilot","Amp","Cursor","OpenCode","Droid","Qwen Code"],
+   repo:"https://github.com/BloopAI/vibe-kanban",
+   note:"Bloop announced a company shutdown (Apr 2026); project continues as community-maintained Apache-2.0."},
+
+  {tier:1, name:"Conductor", sub:"Melty Labs", lic:"proprietary", licLabel:"Proprietary (app free)",
+   forms:["desktop"], formLabel:"Desktop (macOS only)",
+   desc:"The most polished commercial option. Native macOS app running parallel agents in isolated worktrees with a diff-first review UI, checkpoints, and multi-model mode.",
+   auth:"Uses your Claude Pro/Max or Codex login; API-key mode optional.",
+   harnesses:["Claude Code","Codex","Cursor","OpenCode"],
+   repo:null, repoLabel:"conductor.build — closed source",
+   note:"Faced criticism over broad GitHub OAuth scopes; later shipped fine-grained permissions."},
+
+  {tier:1, name:"Omnara", sub:"YC S25", lic:"permissive", licLabel:"Apache-2.0",
+   forms:["desktop","web","mobile"], formLabel:"Desktop + Web + iOS/Android + Watch",
+   desc:"A mobile-first command center that wraps local agent sessions so you can monitor, steer, and voice-control them from anywhere. Best pick if remote/phone control matters.",
+   auth:"Agents run on your machine with your subscription; no token markup.",
+   harnesses:["Claude Code","Codex CLI"],
+   repo:"https://github.com/omnara-ai/omnara"},
+
+  {tier:1, name:"Emdash", sub:"General Action · YC W26", lic:"permissive", licLabel:"Apache-2.0",
+   forms:["desktop"], formLabel:"Desktop (local + SSH)",
+   desc:"Broadest harness coverage in a desktop app — auto-detects and runs many agent CLIs in parallel worktrees, with diff review, PR creation, and Linear/Jira/GitHub ticket ingestion.",
+   auth:"Each provider's own auth (subscription or key).",
+   harnesses:["33 CLIs incl. Claude Code","Codex","Cursor","OpenCode","Amp","Devin","Qwen","Droid","Copilot","Gemini","Cline"],
+   repo:"https://github.com/generalaction/emdash"},
+
+  {tier:1, name:"Sculptor", sub:"Imbue", lic:"permissive", licLabel:"MIT",
+   forms:["desktop"], formLabel:"Desktop (macOS AS + Linux)",
+   desc:"Runs each agent in its own Docker container rather than a worktree — strongest isolation among the desktop tools. 'Pairing Mode' syncs an agent's work into your local repo for instant testing.",
+   auth:"Claude Pro/Max subscription or API keys. Free in beta.",
+   harnesses:["Claude Code","Pi harness","Codex","any terminal agent"],
+   repo:"https://github.com/imbue-ai/sculptor"},
+
+  {tier:1, name:"Crystal → Nimbalyst", sub:"Stravu", lic:"permissive", licLabel:"MIT",
+   forms:["desktop"], formLabel:"Desktop",
+   desc:"Run multiple sessions in parallel worktrees to test and compare approaches. Crystal was deprecated (Feb 2026) and succeeded by Nimbalyst, which adds visual editing and kanban.",
+   auth:"Subscription / bring-your-own.",
+   harnesses:["Claude Code","Codex"],
+   repo:"https://github.com/stravu/crystal",
+   note:"Crystal is archived; active development moved to Nimbalyst (also MIT)."},
+
+  {tier:1, name:"Terragon (OSS)", sub:"Terragon Labs", lic:"permissive", licLabel:"Open-source snapshot",
+   forms:["web"], formLabel:"Web (cloud/remote)",
+   desc:"A remote background-agent orchestrator, published as an open-source snapshot after the hosted service shut down (Jan 2026). Sandbox isolation and automatic branch/PR workflow.",
+   auth:"BYO subscription (Claude/ChatGPT) or API keys.",
+   harnesses:["Claude Code","Codex","Amp","Gemini"],
+   repo:"https://github.com/terragon-labs/terragon-oss",
+   note:"Hosted service is discontinued; repo is provided as-is."},
+
+  {tier:1, name:"Omnigent", sub:"omnigent-ai", lic:"permissive", licLabel:"Open source",
+   forms:["desktop","web","mobile"], formLabel:"Desktop + Web + Phone",
+   desc:"An open-source 'meta-harness' giving one orchestration layer over many agents — mix harnesses in a single session and route one agent's diff to a reviewer from a different vendor.",
+   auth:"API key, Claude/ChatGPT subscription, or any gateway — all first-class.",
+   harnesses:["Claude Code","Codex","Cursor","OpenCode","Hermes","Pi","custom (YAML)"],
+   repo:"https://github.com/omnigent-ai/omnigent"},
+
+  // ---------- TIER 2 ----------
+  {tier:2, name:"Claude Squad", sub:"smtg-ai", lic:"copyleft", licLabel:"AGPL-3.0",
+   forms:["desktop"], formLabel:"Terminal / TUI",
+   desc:"A terminal app managing many agents in tmux + git worktrees, with a dashboard view and auto-accept mode. TUI rather than a true GUI.",
+   auth:"Subscription / bring-your-own.",
+   harnesses:["Claude Code","Codex","Gemini","Aider","OpenCode","Amp"],
+   repo:"https://github.com/smtg-ai/claude-squad"},
+
+  {tier:2, name:"cmux", sub:"manaflow-ai", lic:"copyleft", licLabel:"GPL-3.0-or-later",
+   forms:["desktop"], formLabel:"Native macOS terminal",
+   desc:"A Ghostty-based macOS terminal built for parallel agents: vertical tabs, per-pane notification rings, an embedded scriptable browser, and a socket API.",
+   auth:"Subscription. Commercial license available for orgs that can't ship GPL.",
+   harnesses:["Claude Code","Codex","OpenCode","Gemini CLI","Aider","Goose","Amp","Cline","Cursor Agent"],
+   repo:"https://github.com/manaflow-ai/cmux",
+   note:"Several unrelated projects are also called 'cmux' — confirm the org."},
+
+  {tier:2, name:"Uzi", sub:"devflowinc", lic:"permissive", licLabel:"MIT",
+   forms:["desktop"], formLabel:"CLI / TUI",
+   desc:"A CLI to launch large numbers of agents in parallel via worktrees + tmux (e.g. --agents claude:2,codex:1). No true GUI.",
+   auth:"Subscription / bring-your-own.",
+   harnesses:["Claude","Codex","Cursor","Aider"],
+   repo:"https://github.com/devflowinc/uzi"},
+
+  {tier:2, name:"Backlog.md", sub:"MrLesk", lic:"permissive", licLabel:"MIT",
+   forms:["desktop","web"], formLabel:"Terminal + local web UI",
+   desc:"A Markdown-native task manager with a terminal Kanban and a local web UI for human/AI collaboration. A coordination layer rather than a live session runner.",
+   auth:"Works with any MCP/CLI-compatible agent.",
+   harnesses:["Claude Code","Gemini CLI","Codex","Kiro","any MCP agent"],
+   repo:"https://github.com/MrLesk/Backlog.md"},
+
+  {tier:2, name:"container-use", sub:"Dagger", lic:"permissive", licLabel:"Open source",
+   forms:["desktop"], formLabel:"CLI / MCP server",
+   desc:"An MCP server + CLI giving agents isolated containers and git branches. No GUI itself, but underpins safe parallel multi-agent work.",
+   auth:"Any MCP-compatible agent.",
+   harnesses:["Claude Code","Cursor","Codex","any MCP agent"],
+   repo:"https://github.com/dagger/container-use"},
+
+  {tier:2, name:"HumanLayer / CodeLayer", sub:"humanlayer", lic:"permissive", licLabel:"Apache-2.0",
+   forms:["desktop"], formLabel:"SDK + app",
+   desc:"An SDK plus 'CodeLayer' for getting agents to solve hard problems in complex codebases; includes MULTICLAUDE for parallel Claude Code sessions across worktrees and cloud workers.",
+   auth:"Subscription / bring-your-own.",
+   harnesses:["Claude Code","cloud workers"],
+   repo:"https://github.com/humanlayer/humanlayer"},
+
+  // ---------- TIER 3 ----------
+  {tier:3, name:"agent-of-empires", sub:"community", lic:"permissive", licLabel:"MIT (provisional)",
+   forms:["desktop","web","mobile"], formLabel:"TUI + web, mobile-friendly",
+   desc:"Manages many agents across a wide harness set; mobile-friendly interface.",
+   auth:"Bring-your-own.",
+   harnesses:["Claude Code","OpenCode","Codex CLI","Gemini CLI","Pi","Copilot CLI","Mistral Vibe","Factory Droid"],
+   repo:null, repoLabel:"see awesome-agent-orchestrators", provisional:true},
+
+  {tier:3, name:"Superset", sub:"community", lic:"copyleft", licLabel:"Elastic License 2.0 (provisional)",
+   forms:["desktop"], formLabel:"Terminal for agents",
+   desc:"'A terminal built for coding agents' that orchestrates parallel sessions. ~12k stars.",
+   auth:"Bring-your-own.",
+   harnesses:["multiple CLIs"],
+   repo:null, repoLabel:"see awesome-agent-orchestrators", provisional:true},
+
+  {tier:3, name:"parallel-code", sub:"community", lic:"permissive", licLabel:"provisional",
+   forms:["desktop"], formLabel:"Desktop",
+   desc:"Desktop app for running agents in isolated worktrees with a diff viewer and one-click merge.",
+   auth:"Bring-your-own.",
+   harnesses:["Claude Code","Codex CLI","Gemini CLI"],
+   repo:null, repoLabel:"see awesome-agent-orchestrators", provisional:true},
+
+  {tier:3, name:"clideck", sub:"community", lic:"permissive", licLabel:"provisional",
+   forms:["web","mobile"], formLabel:"Browser dashboard + phone",
+   desc:"A WhatsApp-like browser dashboard with autopilot routing and phone control.",
+   auth:"Bring-your-own.",
+   harnesses:["Claude Code","Codex","Gemini CLI","OpenCode"],
+   repo:null, repoLabel:"see awesome-agent-orchestrators", provisional:true},
+
+  {tier:3, name:"Proliferate", sub:"community", lic:"permissive", licLabel:"Open source (provisional)",
+   forms:["desktop","web"], formLabel:"Local + cloud IDE",
+   desc:"Open-source local + cloud agent IDE running multiple agents in parallel.",
+   auth:"Bring-your-own.",
+   harnesses:["Claude Code","Codex","Gemini CLI"],
+   repo:null, repoLabel:"see awesome-agent-orchestrators", provisional:true},
+
+  {tier:3, name:"constellagent", sub:"community", lic:"permissive", licLabel:"provisional",
+   forms:["desktop"], formLabel:"macOS app",
+   desc:"Each agent gets its own terminal, editor, and git worktree.",
+   auth:"Bring-your-own.",
+   harnesses:["Claude Code","Codex","others"],
+   repo:null, repoLabel:"see awesome-agent-orchestrators", provisional:true},
+
+  {tier:3, name:"agentsmesh", sub:"community", lic:"permissive", licLabel:"provisional",
+   forms:["web"], formLabel:"Self-hostable platform",
+   desc:"Self-hostable 'agent workforce' platform, bring-your-own-key.",
+   auth:"BYOK.",
+   harnesses:["Claude Code","Codex CLI","Gemini CLI","Aider","OpenCode"],
+   repo:null, repoLabel:"see awesome-agent-orchestrators", provisional:true},
+
+  {tier:3, name:"dorothy", sub:"community", lic:"permissive", licLabel:"provisional",
+   forms:["desktop"], formLabel:"Desktop",
+   desc:"Orchestrates multiple AI CLI agents with automations, Kanban, and MCP servers.",
+   auth:"Bring-your-own.",
+   harnesses:["multiple CLIs","MCP"],
+   repo:null, repoLabel:"see awesome-agent-orchestrators", provisional:true},
+];
+
+const REGISTRY = "https://github.com/andyrewlee/awesome-agent-orchestrators";
+const TIER_META = {
+  1:{t:"Best matches", s:"Full GUI · multiple parallel sessions · multiple harnesses · reuses your subscriptions."},
+  2:{t:"Terminal & TUI managers", s:"GUI-adjacent — some ship a web UI. Strong at parallelism, lighter on visual polish."},
+  3:{t:"Further candidates", s:"From curated directories. Details are secondhand — verify the repo and license before adopting."},
+};
+
+const app = document.getElementById('app');
+const state = {q:"", filters:new Set()};
+
+function harnessChips(arr){return arr.map(h=>`<span class="harness">${h}</span>`).join("");}
+
+function cardHTML(t, i){
+  const repoBlock = t.repo
+    ? `<a class="repo-link" href="${t.repo}" target="_blank" rel="noopener">
+         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.5v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.6 18.3 5 18.3 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.5-2.7 5.5-5.3 5.8.4.4.8 1.1.8 2.2v3.3c0 .3.2.6.8.5A11.5 11.5 0 0 0 23.5 12C23.5 5.7 18.3.5 12 .5Z"/></svg>
+         ${t.repo.replace("https://github.com/","")}
+       </a>`
+    : `<span class="repo-link dead">${t.repoLabel||"no public source"}${t.provisional?` · <a class="inline" href="${REGISTRY}" target="_blank" rel="noopener">registry</a>`:""}</span>`;
+  const noteBlock = t.note?`<div class="note">${t.note}</div>`:"";
+  return `
+  <article class="card" data-lic="${t.lic}" data-forms="${t.forms.join(' ')}" data-i="${i}">
+    <div class="card-top" role="button" tabindex="0" aria-expanded="false">
+      <div class="card-row1">
+        <div class="card-name">${t.name}<span class="tag">${t.sub}</span></div>
+        <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+      </div>
+      <p class="card-desc">${t.desc}</p>
+      <div class="badges">
+        <span class="badge lic-${t.lic}"><span class="dot"></span>${t.licLabel}</span>
+        <span class="badge form"><span class="dot"></span>${t.formLabel}</span>
+      </div>
+    </div>
+    <div class="detail">
+      <div class="detail-inner">
+        <div class="drow"><span class="dkey">Auth</span><span class="dval">${t.auth}</span></div>
+        <div class="drow"><span class="dkey">Harnesses</span><span class="dval">${harnessChips(t.harnesses)}</span></div>
+        <div class="drow"><span class="dkey">License</span><span class="dval">${t.licLabel}</span></div>
+        ${repoBlock}
+        ${noteBlock}
+      </div>
+    </div>
+  </article>`;
+}
+
+function matches(t){
+  if(state.filters.size){
+    for(const f of state.filters){
+      const isForm = ["desktop","web","mobile"].includes(f);
+      if(isForm){ if(!t.forms.includes(f)) return false; }
+      else { if(t.lic!==f) return false; }
+    }
+  }
+  if(state.q){
+    const hay = (t.name+" "+t.sub+" "+t.desc+" "+t.licLabel+" "+t.harnesses.join(" ")+" "+t.formLabel+" "+t.auth).toLowerCase();
+    if(!hay.includes(state.q)) return false;
+  }
+  return true;
+}
+
+function render(){
+  const shown = TOOLS.map((t,i)=>({t,i})).filter(o=>matches(o.t));
+  document.getElementById('count').innerHTML = `<b>${shown.length}</b> / ${TOOLS.length} tools`;
+  let html = "";
+  [1,2,3].forEach(tier=>{
+    const group = shown.filter(o=>o.t.tier===tier);
+    if(!group.length) return;
+    const m = TIER_META[tier];
+    html += `<section class="tier">
+      <div class="tier-head"><span class="tier-num">TIER ${tier}</span><h2>${m.t}</h2></div>
+      <p class="tier-sub">${m.s}</p>
+      <div class="grid">${group.map(o=>cardHTML(o.t,o.i)).join("")}</div>
+    </section>`;
+  });
+  if(!shown.length) html = `<div class="tier"><div class="grid"><div class="empty">No tools match those filters. Try clearing one.</div></div></div>`;
+  app.innerHTML = html;
+  bindCards();
+}
+
+function bindCards(){
+  app.querySelectorAll('.card-top').forEach(top=>{
+    const toggle=()=>{
+      const card=top.closest('.card');
+      const open=card.classList.toggle('open');
+      top.setAttribute('aria-expanded',open);
+    };
+    top.addEventListener('click',toggle);
+    top.addEventListener('keydown',e=>{
+      if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle();}
+    });
+  });
+}
+
+document.getElementById('q').addEventListener('input',e=>{state.q=e.target.value.toLowerCase().trim();render();});
+document.getElementById('filters').addEventListener('click',e=>{
+  const chip=e.target.closest('.chip'); if(!chip) return;
+  const f=chip.dataset.f;
+  if(state.filters.has(f)){state.filters.delete(f);chip.setAttribute('aria-pressed','false');}
+  else{state.filters.add(f);chip.setAttribute('aria-pressed','true');}
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
