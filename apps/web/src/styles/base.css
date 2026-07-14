@@ -1,0 +1,32 @@
+/*
+ * Global resets + page-level background treatment.
+ *
+ * Kept separate from tokens.css on purpose: tokens.css is pure data (custom
+ * properties only) and safe to import anywhere without side effects. This
+ * file has side effects (selectors touching `*`, `html`, `body`), so keeping
+ * it apart means anything that only needs the palette/type variables can
+ * import tokens.css alone.
+ */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--body);
+  font-weight: 400;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  /* Two faint radial glows, top-left teal / top-right violet, matching the prototype. */
+  background-image: radial-gradient(circle at 12% -5%, rgba(94, 234, 212, 0.06), transparent 45%),
+    radial-gradient(circle at 92% 8%, rgba(169, 156, 245, 0.05), transparent 40%);
+  background-attachment: fixed;
+  padding-bottom: 80px;
+}

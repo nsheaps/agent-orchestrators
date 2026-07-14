@@ -7,22 +7,49 @@ subscriptions you already pay for rather than raw API keys. The canonical
 example in this space is [traycer.ai](https://traycer.ai).
 
 **Live site:** https://nsheaps.github.io/agent-orchestrators/
-(single static page — `multi-agent-orchestrators.html`, deployed as-is via
-GitHub Actions on every push to `main`)
+
+## Stack
+
+- **Bun** — package manager, task runner, test runner
+- **Nx** — orchestrates the workspace's `dev`/`build`/`lint`/`typecheck`/`test`
+  targets (package-based: each app just declares plain npm scripts, no
+  `project.json` needed — see `nx.json`)
+- **Vue 3** (`<script setup>` + Composition API) + **vue-router** + **Vite**,
+  written in strict TypeScript
 
 ## What's here
 
-- `multi-agent-orchestrators.html` — the artifact. All tool data lives in the
-  `TOOLS` array in its `<script>` block; that array is the single source of
-  truth. Cards show name / description / license / form factor at rest and
-  expand to reveal auth model, supported harnesses, repo link, and caveats.
+- `apps/web/` — the app. Three routes: `/` (featured Tier-1 picks), `/browse`
+  (search + filter the full catalog), `/tools/:slug` (one tool's full detail).
+  - `src/data/tools.ts` — the single source of truth for every tool's tier,
+    license, form factor, harnesses, auth model, and links (homepage, code
+    homepage/repo, developer docs, direct license text).
+  - `src/composables/useToolFilters.ts` — search + filter-chip logic, synced
+    to the URL query string so filtered views are shareable links.
+  - `src/components/`, `src/views/` — UI.
 - `CHANGELOG.md` — verification log: what was confirmed, corrected, added, or
-  couldn't be confirmed on each pass.
+  couldn't be confirmed on each research pass.
+- `multi-agent-orchestrators.html` — the original single-file prototype this
+  app replaced. Kept for history; no longer deployed.
 
-## Updating
+## Developing
 
-Edit the `TOOLS` array directly in the HTML file, then push to `main` — the
-Pages deploy workflow picks it up automatically. One-time setup: repo
+```bash
+mise install       # bun + node
+bun install        # JS/TS deps resolve via Cloudsmith — see bunfig.toml
+bun run dev         # dev server (apps/web)
+bun run validate    # lint + typecheck + test + build
+```
+
+> **Cloudsmith:** this repo's `bunfig.toml` points package installs at the
+> org's Cloudsmith npm registry per policy. If you hit 403s installing
+> locally or in CI, onboard to Cloudsmith first:
+> https://ouraring.atlassian.net/wiki/spaces/SW/pages/429498723/Cloudsmith
+
+## Updating the catalog
+
+Edit `apps/web/src/data/tools.ts` directly, then push to `main` — the Pages
+deploy workflow rebuilds and republishes automatically. One-time setup: repo
 Settings → Pages → Source: **GitHub Actions**.
 
 This space moves fast; re-verify licenses and repo links periodically —

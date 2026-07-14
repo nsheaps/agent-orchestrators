@@ -1,0 +1,5 @@
+[install]
+exact = true
+# Org policy: JS/TS packages resolve through Cloudsmith, not the public registry.
+# See https://ouraring.atlassian.net/wiki/spaces/SW/pages/429498723/Cloudsmith
+registry = "https://npm.artifacts.oura.cloud/main/"

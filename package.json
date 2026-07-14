@@ -1,0 +1,22 @@
+{
+  "name": "agent-orchestrators",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "nx run @agent-orchestrators/web:dev",
+    "build": "nx run-many -t build",
+    "test": "nx run-many -t test",
+    "lint": "nx run-many -t lint",
+    "typecheck": "nx run-many -t typecheck",
+    "validate": "bun run lint && bun run typecheck && bun run test && bun run build"
+  },
+  "devDependencies": {
+    "nx": "22.7.5"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
